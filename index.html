@@ -391,6 +391,21 @@
                     </div>
                 </div>
 
+                <!-- PENANGGUNG JAWAB SARPRAS PROFILE -->
+                <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3">
+                    <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-shield text-emerald-600"></i> Profile Penanggung Jawab / Koordinator Sarpras
+                    </h4>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Nama Koordinator Sarpras</label>
+                        <input type="text" id="profile-sarpras-pic-name" placeholder="Contoh: Nama Koordinator Sarpras" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">NIP Koordinator Sarpras</label>
+                        <input type="text" id="profile-sarpras-pic-nip" placeholder="Contoh: NIP Koordinator Sarpras" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-mono text-slate-800">
+                    </div>
+                </div>
+
                 <!-- ACTIVE ROOM PIC PROFILE -->
                 <div class="bg-emerald-50/70 border border-emerald-200 p-4 rounded-xl space-y-3">
                     <div class="flex items-center justify-between">
@@ -526,6 +541,11 @@
             roomStatuses: {},
             roomProfiles: {},
             headmaster: {},
+            sarprasPic: {
+                name: '',
+                nip: '',
+                title: 'Koordinator Sarpras'
+            },
             schoolInfo: {
                 name: 'SMP NEGERI 1 UNGGULAN',
                 address: 'Jl. Pendidikan No. 123, Kabupaten/Kota - Telepon: (021) 555-0199 | Website: www.sekolah.sch.id'
@@ -682,6 +702,7 @@
         const STORAGE_KEY_STATUS = 'SIMSARPRAS_STATUS_V40';
         const STORAGE_KEY_PROFILES = 'SIMSARPRAS_ROOM_PROFILES_V40';
         const STORAGE_KEY_HEADMASTER = 'SIMSARPRAS_HEADMASTER_V40';
+        const STORAGE_KEY_SARPRAS_PIC = 'SIMSARPRAS_SARPRAS_PIC_V40';
         const STORAGE_KEY_SCHOOL = 'SIMSARPRAS_SCHOOL_V40';
         const STORAGE_KEY_CUSTOM_PRESETS = 'SIMSARPRAS_CUSTOM_PRESETS_V40';
         const STORAGE_KEY_PIN = 'SIMSARPRAS_PIN_V40';
@@ -699,6 +720,7 @@
                 const storedStatuses = localStorage.getItem(STORAGE_KEY_STATUS);
                 const storedProfiles = localStorage.getItem(STORAGE_KEY_PROFILES);
                 const storedHeadmaster = localStorage.getItem(STORAGE_KEY_HEADMASTER);
+                const storedSarprasPic = localStorage.getItem(STORAGE_KEY_SARPRAS_PIC);
                 const storedSchool = localStorage.getItem(STORAGE_KEY_SCHOOL);
                 const storedCustom = localStorage.getItem(STORAGE_KEY_CUSTOM_PRESETS);
                 const storedPin = localStorage.getItem(STORAGE_KEY_PIN);
@@ -757,6 +779,13 @@
                     saveHeadmasterToStorage();
                 }
 
+                if (storedSarprasPic) {
+                    state.sarprasPic = JSON.parse(storedSarprasPic);
+                } else {
+                    state.sarprasPic = { name: '', nip: '', title: 'Koordinator Sarpras' };
+                    saveSarprasPicToStorage();
+                }
+
                 if (storedSchool) {
                     state.schoolInfo = JSON.parse(storedSchool);
                 } else {
@@ -783,6 +812,7 @@
         function saveStatusToStorage() { localStorage.setItem(STORAGE_KEY_STATUS, JSON.stringify(state.roomStatuses)); }
         function saveProfilesToStorage() { localStorage.setItem(STORAGE_KEY_PROFILES, JSON.stringify(state.roomProfiles)); }
         function saveHeadmasterToStorage() { localStorage.setItem(STORAGE_KEY_HEADMASTER, JSON.stringify(state.headmaster)); }
+        function saveSarprasPicToStorage() { localStorage.setItem(STORAGE_KEY_SARPRAS_PIC, JSON.stringify(state.sarprasPic)); }
         function saveSchoolToStorage() { localStorage.setItem(STORAGE_KEY_SCHOOL, JSON.stringify(state.schoolInfo)); }
         function saveCustomPresetsToStorage() { localStorage.setItem(STORAGE_KEY_CUSTOM_PRESETS, JSON.stringify(state.customPresets)); }
         function savePinToStorage() { localStorage.setItem(STORAGE_KEY_PIN, state.sarprasPin); }
@@ -876,6 +906,9 @@
             document.getElementById('profile-headmaster-name').value = state.headmaster.name || '';
             document.getElementById('profile-headmaster-nip').value = state.headmaster.nip || '';
 
+            document.getElementById('profile-sarpras-pic-name').value = state.sarprasPic?.name || '';
+            document.getElementById('profile-sarpras-pic-nip').value = state.sarprasPic?.nip || '';
+
             document.getElementById('profile-room-title').innerText = currentRoom.name;
             document.getElementById('profile-room-id').value = currentRoom.id;
             document.getElementById('profile-pic-title').value = picProfile.picTitle || '';
@@ -894,6 +927,8 @@
             document.getElementById('profile-school-address').value = '';
             document.getElementById('profile-headmaster-name').value = '';
             document.getElementById('profile-headmaster-nip').value = '';
+            document.getElementById('profile-sarpras-pic-name').value = '';
+            document.getElementById('profile-sarpras-pic-nip').value = '';
             document.getElementById('profile-pic-title').value = '';
             document.getElementById('profile-pic-name').value = '';
             document.getElementById('profile-pic-nip').value = '';
@@ -923,6 +958,14 @@
                 jabatan: 'Kepala Sekolah'
             };
             saveHeadmasterToStorage();
+
+            // Simpan Profil Penanggung Jawab / Koordinator Sarpras
+            state.sarprasPic = {
+                name: document.getElementById('profile-sarpras-pic-name').value.trim() || '...........................................',
+                nip: document.getElementById('profile-sarpras-pic-nip').value.trim() || '...........................................',
+                title: 'Koordinator Sarpras'
+            };
+            saveSarprasPicToStorage();
 
             // Simpan Profil Penanggung Jawab Ruangan Aktif
             if (roomId) {
@@ -1072,6 +1115,7 @@
             const room = ROOM_LIST.find(r => r.id === roomId) || ROOM_LIST[0];
             const picProfile = state.roomProfiles[room.id] || { picTitle: room.picTitle, picName: room.picName, picNip: room.picNip };
             const headmaster = state.headmaster;
+            const sarprasPic = state.sarprasPic || { name: '', nip: '' };
             const school = state.schoolInfo || { name: 'SMP NEGERI 1 UNGGULAN', address: 'Jl. Pendidikan No. 123' };
             const items = state.items.filter(i => i.roomId === roomId);
 
@@ -1169,8 +1213,8 @@
                         <div class="space-y-1">
                             <p class="text-slate-700">Pemeriksa / Verifikator,<br><strong class="text-slate-900">Tim Sarana & Prasarana</strong></p>
                             <div class="h-16"></div>
-                            <p class="font-bold underline text-slate-900">Koordinator Sarpras</p>
-                            <p class="text-[11px] text-slate-600">NIP. ...........................................</p>
+                            <p class="font-bold underline text-slate-900">${escapeHtml(sarprasPic.name) || '...........................................'}</p>
+                            <p class="text-[11px] text-slate-600">NIP. ${escapeHtml(sarprasPic.nip) || '...........................................'}</p>
                         </div>
                         <div class="space-y-1">
                             <p class="text-slate-700">Mengetahui,<br><strong class="text-slate-900">Kepala Sekolah</strong></p>
@@ -1187,6 +1231,7 @@
 
         function triggerPrintMasterReport() {
             const headmaster = state.headmaster;
+            const sarprasPic = state.sarprasPic || { name: '', nip: '' };
             const school = state.schoolInfo || { name: 'SMP NEGERI 1 UNGGULAN', address: 'Jl. Pendidikan No. 123' };
             const items = state.items;
 
@@ -1248,8 +1293,8 @@
                         <div class="space-y-1">
                             <p class="text-slate-700">Penanggung Jawab Sarpras Sekolah,</p>
                             <div class="h-16"></div>
-                            <p class="font-bold underline text-slate-900">Koordinator Tim Sarpras</p>
-                            <p class="text-[11px] text-slate-600">NIP. ...........................................</p>
+                            <p class="font-bold underline text-slate-900">${escapeHtml(sarprasPic.name) || '...........................................'}</p>
+                            <p class="text-[11px] text-slate-600">NIP. ${escapeHtml(sarprasPic.nip) || '...........................................'}</p>
                         </div>
                         <div class="space-y-1">
                             <p class="text-slate-700">Mengetahui,<br><strong class="text-slate-900">Kepala Sekolah</strong></p>
