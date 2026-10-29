@@ -1,0 +1,2144 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIMSARPRAS - Sistem Manajemen Inventaris Sekolah</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom styles for printing */
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+            }
+            body > *:not(#printable-area) {
+                display: none !important;
+            }
+            #printable-area {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+                color: black !important;
+            }
+            #printable-area * {
+                visibility: visible !important;
+            }
+            .no-print, header, footer, #sub-header-bar, #toast-container, #print-modal, #item-modal, #confirm-modal, #profile-modal {
+                display: none !important;
+            }
+            @page {
+                size: auto;
+                margin: 12mm;
+            }
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Header Navigation -->
+    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-40 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Title -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-900 font-bold text-xl shadow-lg">
+                        <i class="fa-solid fa-boxes-packing"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                            SIMSARPRAS
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">v4.0 Final</span>
+                        </h1>
+                        <p class="text-xs text-slate-400 hidden sm:block">Sistem Informasi Manajemen Sarana & Prasarana Sekolah</p>
+                    </div>
+                </div>
+
+                <!-- Mode / Peran & Penanggung Jawab Selector Dropdown -->
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <div class="flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+                        <label for="select-active-role" class="text-xs text-slate-400 pl-2 hidden md:inline font-medium">Peran Aktif:</label>
+                        <select id="select-active-role" onchange="onRoleDropdownChange(this.value)" class="bg-slate-900 text-emerald-400 font-bold text-xs sm:text-sm px-3 py-1.5 rounded-lg border border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="SARPRAS">🛡️ Tim Sarpras (Admin Global)</option>
+                            <optgroup label="🏫 Pemegang Ruangan (Wali Kelas & Kepala Lab/Unit)">
+                                <!-- Dynamically populated via JS -->
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <!-- Button to Edit Active PIC & Headmaster NIP Profile -->
+                    <button onclick="openProfileModal()" title="Pengaturan Nama & NIP Penanggung Jawab / Kepsek" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shrink-0">
+                        <i class="fa-solid fa-id-card-clip text-emerald-400"></i>
+                        <span class="hidden sm:inline">Profil & NIP</span>
+                    </button>
+
+                    <!-- Button to Clear/Reset All Inventory Data to 0 -->
+                    <button onclick="clearAllInventoryData()" title="Kosongkan Seluruh Data Inventaris" class="px-3 py-2 bg-rose-900/40 hover:bg-rose-800/60 text-rose-300 border border-rose-700/50 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shrink-0">
+                        <i class="fa-solid fa-broom"></i>
+                        <span class="hidden md:inline">Kosongkan Data</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sub-header Bar (Context Specific) -->
+    <div id="sub-header-bar" class="bg-white border-b border-slate-200 shadow-sm no-print">
+        <!-- Injected via JS -->
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 no-print">
+        <div id="main-content"></div>
+    </main>
+
+    <!-- Printable Area Template (Hidden on screen view) -->
+    <div id="printable-area" class="hidden"></div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 mt-auto no-print">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <span>&copy; 2026 SIMSARPRAS - Tim Pengelola Sarana dan Prasarana Sekolah.</span>
+            <span class="text-slate-400">Pemisahan Kolom Spesifik: Nama | Merk | Kategori | Jenis | Jumlah | Satuan</span>
+        </div>
+    </footer>
+
+    <!-- MODAL: Item Form (Add / Edit) -->
+    <div id="item-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden transform transition-all my-6">
+            <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white">
+                <h3 id="modal-title" class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-box text-emerald-400"></i>
+                    <span>Tambah Barang Inventaris</span>
+                </h3>
+                <button onclick="closeItemModal()" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <form id="item-form" onsubmit="handleItemFormSubmit(event)" class="p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+                <input type="hidden" id="form-item-id">
+                
+                <!-- Ruangan Selection -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Ruangan Lokasi <span class="text-rose-500">*</span>
+                    </label>
+                    <select id="form-item-room" onchange="onRoomOrPresetChanged()" required class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm bg-slate-50 font-medium">
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
+
+                <!-- PRESET KATALOG BRG OTOMATIS -->
+                <div class="bg-emerald-50/80 border border-emerald-200 p-4 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-extrabold text-emerald-900 uppercase tracking-wider">
+                            <i class="fa-solid fa-wand-magic-sparkles text-emerald-600 mr-1"></i> Pilih Preset Jenis Barang (Otomatis)
+                        </label>
+                        <span class="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-2 py-0.5 rounded-full">Auto Fill Category, Type & Code</span>
+                    </div>
+                    <select id="form-item-preset" onchange="onPresetSelected(this.value)" class="w-full px-3 py-2 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm bg-white font-medium text-slate-800">
+                        <!-- Populated via JS -->
+                    </select>
+                    <p class="text-[11px] text-emerald-700 leading-tight">
+                        * Memilih preset di atas akan otomatis mengisi Jenis Barang, Kategori, Satuan Standar, dan Format Kode Barang.
+                    </p>
+                </div>
+
+                <!-- CUSTOM JENIS BARANG INPUT (Shown if 'CUSTOM_NEW' selected) -->
+                <div id="form-custom-jenis-container" class="hidden bg-amber-50 border border-amber-200 p-3 rounded-xl space-y-1">
+                    <label class="block text-xs font-bold text-amber-900 uppercase tracking-wider">
+                        ✏️ Ketik Jenis Barang Baru (Manual) <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text" id="form-custom-jenis" placeholder="Contoh: Alat PeragA Fisika Digital" class="w-full px-3 py-2 border border-amber-300 rounded-xl text-sm font-semibold bg-white">
+                    <p class="text-[10px] text-amber-700 italic">* Jenis barang ini akan otomatis tersimpan di pilihan dropdown untuk pendataan berikutnya.</p>
+                </div>
+
+                <!-- SEPARATE INPUTS: Nama Barang, Merk/Brand, Kategori, Jenis Barang -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Nama Barang (Spesifik) <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" id="form-item-nama" required placeholder="Contoh: Meja Siswa Dual Kayu Jati" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-semibold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Merk / Brand <span class="text-rose-500">*</span>
+                        </label>
+                        <div class="space-y-1">
+                            <select id="form-item-merk-select" onchange="onMerkSelectChange(this.value)" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-semibold bg-white">
+                                <!-- Populated dynamically based on category -->
+                            </select>
+                            <input type="text" id="form-item-merk-custom" placeholder="Ketik Merk Lainnya..." class="hidden w-full px-3 py-2 border border-amber-300 rounded-xl text-sm font-semibold bg-amber-50/60 mt-1">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Kategori <span class="text-rose-500">*</span>
+                        </label>
+                        <select id="form-item-kategori" onchange="onCategoryManualChange(this.value)" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm bg-white font-medium">
+                            <!-- Populated via JS -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Jenis Barang <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" id="form-item-jenis" required placeholder="Contoh: Meja Siswa" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium bg-white">
+                    </div>
+                </div>
+
+                <!-- SEPARATE INPUTS: Jumlah & Nama Satuan -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Jumlah (Angka) <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="number" id="form-item-jumlah" min="1" required value="1" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-bold text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Nama Satuan <span class="text-rose-500">*</span>
+                        </label>
+                        <select id="form-item-satuan" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium">
+                            <option value="Buah">Buah</option>
+                            <option value="Unit">Unit</option>
+                            <option value="Set">Set</option>
+                            <option value="Pcs">Pcs</option>
+                            <option value="Paket">Paket</option>
+                            <option value="Lembar">Lembar</option>
+                            <option value="Stel">Stel</option>
+                            <option value="Box">Box</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Kondisi Barang <span class="text-rose-500">*</span>
+                        </label>
+                        <select id="form-item-condition" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-semibold">
+                            <option value="Baik" class="text-emerald-700 font-bold">Baik</option>
+                            <option value="Rusak Ringan" class="text-amber-700 font-bold">Rusak Ringan</option>
+                            <option value="Rusak Berat" class="text-rose-700 font-bold">Rusak Berat</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Kode Barang Field -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                            Kode Barang (Otomatis) <span class="text-rose-500">*</span>
+                        </label>
+                        <span id="code-auto-badge" class="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <i class="fa-solid fa-check"></i> Auto Formatter
+                        </span>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="form-item-code" required placeholder="Format: MBL-7A-001" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-mono font-bold text-emerald-900 bg-slate-50">
+                        <button type="button" onclick="regenerateItemCode()" title="Regenerate Kode Otomatis" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-slate-700 text-xs font-bold transition flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-arrows-rotate mr-1"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Date Added -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Tanggal Pendataan</label>
+                    <input type="date" id="form-item-date" required class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+
+                <!-- Notes / Specs -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Catatan / Rincian Lokasi & Kerusakan</label>
+                    <textarea id="form-item-notes" rows="2" placeholder="Nomor seri, posisi spesifik di ruangan, atau keterangan kerusakan..." class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm"></textarea>
+                </div>
+
+                <!-- Form Action Buttons -->
+                <div class="pt-4 flex justify-end gap-3 border-t border-slate-200">
+                    <button type="button" onclick="closeItemModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+                        Batal
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md transition flex items-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Simpan Data Inventaris</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Custom Confirm Dialog -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div class="flex items-center gap-3 text-amber-600">
+                <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                <h3 id="confirm-title" class="font-bold text-slate-900 text-lg">Konfirmasi</h3>
+            </div>
+            <p id="confirm-message" class="text-sm text-slate-600 leading-relaxed"></p>
+            <div class="flex justify-end gap-3 pt-2">
+                <button id="confirm-btn-cancel" class="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
+                <button id="confirm-btn-ok" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md">Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: PROFILE & NIP SETTINGS (PENANGGUNG JAWAB & KEPSEK) -->
+    <div id="profile-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden transform transition-all my-6">
+            <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white">
+                <h3 class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-id-card-clip text-emerald-400"></i>
+                    <span>Pengaturan Identitas & NIP Tanda Tangan Cetak</span>
+                </h3>
+                <button onclick="closeProfileModal()" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <form onsubmit="handleProfileFormSubmit(event)" class="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+                
+                <!-- IDENTITAS SEKOLAH -->
+                <div class="bg-emerald-50/80 border border-emerald-200 p-4 rounded-xl space-y-3">
+                    <h4 class="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                        <i class="fa-solid fa-school text-emerald-600"></i> Identitas Sekolah (Kop BAST & Rekap)
+                    </h4>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Nama Sekolah</label>
+                        <input type="text" id="profile-school-name" placeholder="Contoh: SMP NEGERI 1 UNGGULAN" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Alamat & Kontak Sekolah</label>
+                        <input type="text" id="profile-school-address" placeholder="Contoh: Jl. Pendidikan No. 123, Jakarta - Telp: (021) 555-0199" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-medium text-slate-800">
+                    </div>
+                </div>
+
+                <!-- PIN KEAMANAN SARPRAS -->
+                <div class="bg-amber-50/80 border border-amber-200 p-4 rounded-xl space-y-2">
+                    <h4 class="text-xs font-extrabold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                        <i class="fa-solid fa-key text-amber-600"></i> Keamanan PIN Khusus Tim Sarpras
+                    </h4>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">PIN Otentikasi Tim Sarpras <span class="text-rose-500">*</span></label>
+                        <input type="password" id="profile-sarpras-pin" required maxlength="10" placeholder="Contoh: 1234" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-mono font-bold text-slate-900 bg-white">
+                        <p class="text-[10px] text-amber-800 mt-1 italic">* PIN ini digunakan untuk memproteksi akses khusus menu Tim Sarpras dari pemegang ruangan lain.</p>
+                    </div>
+                </div>
+
+                <!-- KEPALA SEKOLAH PROFILE -->
+                <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3">
+                    <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-tie text-emerald-600"></i> Profile Kepala Sekolah (Pihak Mengetahui)
+                    </h4>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Nama Kepala Sekolah</label>
+                        <input type="text" id="profile-headmaster-name" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">NIP Kepala Sekolah</label>
+                        <input type="text" id="profile-headmaster-nip" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-mono text-slate-800">
+                    </div>
+                </div>
+
+                <!-- ACTIVE ROOM PIC PROFILE -->
+                <div class="bg-emerald-50/70 border border-emerald-200 p-4 rounded-xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                            <i class="fa-solid fa-door-open text-emerald-600"></i> Penanggung Jawab: <span id="profile-room-title" class="underline">Ruang 7A</span>
+                        </h4>
+                        <span class="text-[10px] bg-emerald-200 text-emerald-900 font-bold px-2 py-0.5 rounded-full">Ruangan Aktif</span>
+                    </div>
+
+                    <input type="hidden" id="profile-room-id">
+                    
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Jabatan / Gelar Pengelola</label>
+                        <input type="text" id="profile-pic-title" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Nama Penanggung Jawab / Wali Kelas</label>
+                        <input type="text" id="profile-pic-name" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">NIP Penanggung Jawab</label>
+                        <input type="text" id="profile-pic-nip" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-mono text-slate-800">
+                    </div>
+                </div>
+
+                <p class="text-[11px] text-slate-500 italic">
+                    * Data nama & NIP di atas akan dicantumkan secara otomatis pada bagian tanda tangan Berita Acara (BAST) dan Master Rekapitulasi saat dicetak.
+                </p>
+
+                <!-- Form Buttons -->
+                <div class="pt-3 flex flex-wrap justify-between items-center gap-3 border-t border-slate-200">
+                    <button type="button" onclick="clearProfileFormInputs()" class="px-3.5 py-2 border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-eraser"></i>
+                        <span>Kosongkan Profil</span>
+                    </button>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <button type="button" onclick="closeProfileModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50">
+                            Batal
+                        </button>
+                        <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>Simpan Profil & NIP</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: PRINT PREVIEW (PRATINJAU DOKUMEN CETAK BAST & MASTER) -->
+    <div id="print-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center hidden p-2 sm:p-4 no-print">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full flex flex-col max-h-[92vh] overflow-hidden border border-slate-200">
+            <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                <h3 id="print-modal-title" class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-print text-emerald-400"></i> Pratinjau Dokumen Cetak
+                </h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="executeBrowserPrint()" class="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-xs rounded-xl transition shadow flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> Cetak Langsung
+                    </button>
+                    <button onclick="openPrintWindowFallback()" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 font-bold text-xs rounded-xl transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Jendela Baru / PDF
+                    </button>
+                    <button onclick="closePrintModal()" class="text-slate-400 hover:text-white transition ml-2">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="print-modal-body" class="p-6 overflow-y-auto flex-grow bg-slate-100">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: PIN PROTEKSI TIM SARPRAS -->
+    <div id="pin-modal" class="fixed inset-0 bg-slate-900/75 backdrop-blur-md z-50 flex items-center justify-center hidden p-4 no-print">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all border border-slate-200">
+            <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+                    <span>Otentikasi Khusus Tim Sarpras</span>
+                </h3>
+                <button onclick="closePinModal()" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <form onsubmit="verifySarprasPin(event)" class="p-6 space-y-4">
+                <div class="text-center space-y-2">
+                    <div class="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto text-2xl shadow-inner">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <h4 class="font-extrabold text-slate-900 text-base">Area Terbatas Tim Sarpras</h4>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        Masukkan PIN keamanan untuk membuka panel admin rekapitulasi utama Sarana & Prasarana.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 text-center">
+                        PIN Keamanan Sarpras
+                    </label>
+                    <input type="password" id="input-sarpras-pin" required maxlength="10" placeholder="• • • •" class="w-full text-center tracking-[0.5em] text-2xl font-mono font-bold py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50">
+                    <p id="pin-error-msg" class="text-xs font-bold text-rose-600 text-center mt-2 hidden"></p>
+                </div>
+
+                <div class="bg-slate-100 p-3 rounded-xl text-[11px] text-slate-600 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-emerald-600 shrink-0 text-sm"></i>
+                    <span>PIN default awal: <strong class="text-slate-900 font-mono">1234</strong> (Dapat diubah di menu <i>Profil & NIP</i>).</span>
+                </div>
+
+                <div class="pt-2 flex gap-3">
+                    <button type="button" onclick="closePinModal()" class="w-1/2 py-2.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition">
+                        Batal
+                    </button>
+                    <button type="submit" class="w-1/2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-key"></i> Buka Akses
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- APPLICATION LOGIC & DATA SCRIPT -->
+    <script>
+        // --- GLOBAL STATE ---
+        const state = {
+            currentRole: 'PEMEGANG', // Default to Pemegang Ruangan for safety
+            selectedRoomId: '7A',
+            isSarprasUnlocked: false,
+            sarprasPin: '1234',
+            items: [],
+            roomStatuses: {},
+            roomProfiles: {},
+            headmaster: {},
+            schoolInfo: {
+                name: 'SMP NEGERI 1 UNGGULAN',
+                address: 'Jl. Pendidikan No. 123, Kabupaten/Kota - Telepon: (021) 555-0199 | Website: www.sekolah.sch.id'
+            },
+            customPresets: [],
+            filters: {
+                search: '',
+                room: 'ALL',
+                condition: 'ALL'
+            }
+        };
+
+        const INITIAL_SAMPLE_ITEMS = [];
+        const INITIAL_ROOM_STATUS = {};
+
+        // --- 22 ROOM DEFINITIONS WITH DEFAULT PIC PROFILES ---
+        const ROOM_LIST = [
+            // Ruang Kelas (12 Rooms)
+            { id: '7A', code: '7A', name: 'Ruang Kelas 7A', type: 'Kelas', picTitle: 'Wali Kelas 7A', picName: '', picNip: '' },
+            { id: '7B', code: '7B', name: 'Ruang Kelas 7B', type: 'Kelas', picTitle: 'Wali Kelas 7B', picName: '', picNip: '' },
+            { id: '7C', code: '7C', name: 'Ruang Kelas 7C', type: 'Kelas', picTitle: 'Wali Kelas 7C', picName: '', picNip: '' },
+            { id: '7D', code: '7D', name: 'Ruang Kelas 7D', type: 'Kelas', picTitle: 'Wali Kelas 7D', picName: '', picNip: '' },
+            { id: '8A', code: '8A', name: 'Ruang Kelas 8A', type: 'Kelas', picTitle: 'Wali Kelas 8A', picName: '', picNip: '' },
+            { id: '8B', code: '8B', name: 'Ruang Kelas 8B', type: 'Kelas', picTitle: 'Wali Kelas 8B', picName: '', picNip: '' },
+            { id: '8C', code: '8C', name: 'Ruang Kelas 8C', type: 'Kelas', picTitle: 'Wali Kelas 8C', picName: '', picNip: '' },
+            { id: '8D', code: '8D', name: 'Ruang Kelas 8D', type: 'Kelas', picTitle: 'Wali Kelas 8D', picName: '', picNip: '' },
+            { id: '9A', code: '9A', name: 'Ruang Kelas 9A', type: 'Kelas', picTitle: 'Wali Kelas 9A', picName: '', picNip: '' },
+            { id: '9B', code: '9B', name: 'Ruang Kelas 9B', type: 'Kelas', picTitle: 'Wali Kelas 9B', picName: '', picNip: '' },
+            { id: '9C', code: '9C', name: 'Ruang Kelas 9C', type: 'Kelas', picTitle: 'Wali Kelas 9C', picName: '', picNip: '' },
+            { id: '9D', code: '9D', name: 'Ruang Kelas 9D', type: 'Kelas', picTitle: 'Wali Kelas 9D', picName: '', picNip: '' },
+            // Ruang Khusus & Fasilitas (10 Rooms)
+            { id: 'TU', code: 'TU', name: 'Ruang TU (Tata Usaha)', type: 'Khusus', picTitle: 'Kepala Tata Usaha', picName: '', picNip: '' },
+            { id: 'KEPSEC', code: 'KPS', name: 'Ruang Kepala Sekolah', type: 'Khusus', picTitle: 'Kepala Sekolah', picName: '', picNip: '' },
+            { id: 'GURU', code: 'GRU', name: 'Ruang Guru', type: 'Khusus', picTitle: 'Ketua Paguyuban Guru', picName: '', picNip: '' },
+            { id: 'SENI', code: 'SNI', name: 'Ruang Seni & Budaya', type: 'Khusus', picTitle: 'Pengelola Ruang Seni', picName: '', picNip: '' },
+            { id: 'OSIS', code: 'OSS', name: 'Ruang OSIS', type: 'Khusus', picTitle: 'Pembina OSIS', picName: '', picNip: '' },
+            { id: 'PERPUS', code: 'PPS', name: 'Ruang Perpustakaan', type: 'Khusus', picTitle: 'Kepala Perpustakaan', picName: '', picNip: '' },
+            { id: 'UKS', code: 'UKS', name: 'Ruang UKS', type: 'Khusus', picTitle: 'Petugas UKS / Pembina', picName: '', picNip: '' },
+            { id: 'LAB_TI', code: 'LABTI', name: 'Ruang Lab TI / Komputer', type: 'Khusus', picTitle: 'Kepala Lab TI', picName: '', picNip: '' },
+            { id: 'LAB_IPA', code: 'LABIPA', name: 'Ruang Lab IPA', type: 'Khusus', picTitle: 'Kepala Lab IPA', picName: '', picNip: '' },
+            { id: 'GUDANG', code: 'GDG', name: 'Ruang Penyimpanan (Gudang)', type: 'Khusus', picTitle: 'Pengelola Gudang', picName: '', picNip: '' }
+        ];
+
+        // DEFAULT HEADMASTER INFO
+        const DEFAULT_HEADMASTER = {
+            name: '',
+            nip: '',
+            jabatan: 'Kepala Sekolah'
+        };
+
+        // --- MASTER CATEGORIES & PRESETS WITH SEPARATE FIELDS ---
+        const ITEM_CATEGORIES = {
+            'MEBEL': {
+                name: 'Mebel & Furniture',
+                prefix: 'MBL',
+                presets: [
+                    { jenis: 'Meja Siswa', defaultSatuan: 'Unit' },
+                    { jenis: 'Kursi Siswa', defaultSatuan: 'Buah' },
+                    { jenis: 'Meja Guru Utama', defaultSatuan: 'Unit' },
+                    { jenis: 'Kursi Guru Busa', defaultSatuan: 'Buah' },
+                    { jenis: 'Papan Tulis Whiteboard', defaultSatuan: 'Buah' },
+                    { jenis: 'Lemari Dokumen Aset', defaultSatuan: 'Unit' },
+                    { jenis: 'Rak Buku Perpustakaan', defaultSatuan: 'Unit' },
+                    { jenis: 'Meja Rapat / Diskusi', defaultSatuan: 'Set' },
+                    { jenis: 'Sofa Tamu Lengkap', defaultSatuan: 'Set' }
+                ]
+            },
+            'TI': {
+                name: 'Perangkat TI & Komputer',
+                prefix: 'TI',
+                presets: [
+                    { jenis: 'Smartboard Interaktif', defaultSatuan: 'Unit' },
+                    { jenis: 'Laptop', defaultSatuan: 'Unit' },
+                    { jenis: 'PC Desktop Client', defaultSatuan: 'Unit' },
+                    { jenis: 'PC Server Utama', defaultSatuan: 'Unit' },
+                    { jenis: 'Proyektor LCD', defaultSatuan: 'Unit' },
+                    { jenis: 'Switch Hub Network', defaultSatuan: 'Unit' },
+                    { jenis: 'UPS Stabilizer Listrik', defaultSatuan: 'Unit' },
+                    { jenis: 'Printer Multifungsi', defaultSatuan: 'Unit' },
+                    { jenis: 'Scanner Dokumen', defaultSatuan: 'Unit' }
+                ]
+            },
+            'ELEKTRONIK': {
+                name: 'Perangkat Elektronik',
+                prefix: 'ELK',
+                presets: [
+                    { jenis: 'AC Split Pendingin', defaultSatuan: 'Unit' },
+                    { jenis: 'Kipas Angin Dinding', defaultSatuan: 'Buah' },
+                    { jenis: 'Sound System Speaker', defaultSatuan: 'Set' },
+                    { jenis: 'TV LED Display', defaultSatuan: 'Unit' },
+                    { jenis: 'Dispenser Air Minum', defaultSatuan: 'Unit' }
+                ]
+            },
+            'LABIPA': {
+                name: 'Alat & Bahan Lab IPA',
+                prefix: 'LAB',
+                presets: [
+                    { jenis: 'Mikroskop Binokuler', defaultSatuan: 'Set' },
+                    { jenis: 'Torso Anatomi Manusia', defaultSatuan: 'Buah' },
+                    { jenis: 'Set Tabung Reaksi & Rak', defaultSatuan: 'Set' },
+                    { jenis: 'Gelas Ukur / Erlenmeyer', defaultSatuan: 'Buah' },
+                    { jenis: 'Kit Optik & Lensa', defaultSatuan: 'Paket' },
+                    { jenis: 'Respirometer Lab', defaultSatuan: 'Buah' }
+                ]
+            },
+            'MEDIS': {
+                name: 'Peralatan Medis UKS',
+                prefix: 'MED',
+                presets: [
+                    { jenis: 'Ranjang Pasien Bed', defaultSatuan: 'Set' },
+                    { jenis: 'Timbangan & Pengukur Tinggi', defaultSatuan: 'Buah' },
+                    { jenis: 'Tensimeter & Stetoskop', defaultSatuan: 'Set' },
+                    { jenis: 'Kotak Obat P3K', defaultSatuan: 'Buah' },
+                    { jenis: 'Tandu Lipat Emergency', defaultSatuan: 'Buah' }
+                ]
+            },
+            'SENI': {
+                name: 'Alat Seni & Olahraga',
+                prefix: 'ART',
+                presets: [
+                    { jenis: 'Gitar Akustik', defaultSatuan: 'Buah' },
+                    { jenis: 'Keyboard / Pianika', defaultSatuan: 'Unit' },
+                    { jenis: 'Set Rebana / Hadroh', defaultSatuan: 'Set' },
+                    { jenis: 'Easel & Alat Melukis', defaultSatuan: 'Set' },
+                    { jenis: 'Bola Olahraga (Voli/Basket/Sepak)', defaultSatuan: 'Buah' },
+                    { jenis: 'Matras Senam Busa', defaultSatuan: 'Buah' }
+                ]
+            },
+            'ATK': {
+                name: 'ATK & Peralatan Kantor',
+                prefix: 'ATK',
+                presets: [
+                    { jenis: 'Mesin Penghancur Kertas', defaultSatuan: 'Unit' },
+                    { jenis: 'Stempel Resmi Sekolah', defaultSatuan: 'Buah' },
+                    { jenis: 'Mesin Laminating', defaultSatuan: 'Unit' },
+                    { jenis: 'Papan Pengumuman Akrilik', defaultSatuan: 'Buah' }
+                ]
+            }
+        };
+
+        // --- MERK / BRAND OPTIONS PER CATEGORY ---
+        const MERK_OPTIONS_BY_CAT = {
+            'MEBEL': ['Chitose', 'Futura', 'Olympic', 'Lion', 'Informa', 'Daito', 'Lokal / Kayu Jati', 'Tanpa Merk'],
+            'TI': ['Asus', 'Acer', 'Lenovo', 'HP', 'Dell', 'Epson', 'Canon', 'BenQ', 'Samsung', 'Logitech', 'Zyrex', 'Tanpa Merk'],
+            'ELEKTRONIK': ['Sharp', 'Panasonic', 'Polytron', 'LG', 'Maspion', 'Miyako', 'Gree', 'Daikin', 'Samsung', 'Tanpa Merk'],
+            'LABIPA': ['Pyrex', 'Iwaki', 'Olympus', 'LabTech', 'Sailing', 'Nidek', 'Tanpa Merk'],
+            'MEDIS': ['OneMed', 'Omron', 'GEA', 'General Care', 'Elitech', 'Tanpa Merk'],
+            'SENI': ['Yamaha', 'Specs', 'Mikasa', 'Molten', 'Pioneer', 'Cort', 'Roland', 'Tanpa Merk'],
+            'ATK': ['Joyko', 'Kenko', 'PaperOne', 'Bantex', 'Max', 'Tanpa Merk']
+        };
+
+        // --- LOCAL STORAGE KEYS ---
+        const STORAGE_KEY_ITEMS = 'SIMSARPRAS_ITEMS_V40';
+        const STORAGE_KEY_STATUS = 'SIMSARPRAS_STATUS_V40';
+        const STORAGE_KEY_PROFILES = 'SIMSARPRAS_ROOM_PROFILES_V40';
+        const STORAGE_KEY_HEADMASTER = 'SIMSARPRAS_HEADMASTER_V40';
+        const STORAGE_KEY_SCHOOL = 'SIMSARPRAS_SCHOOL_V40';
+        const STORAGE_KEY_CUSTOM_PRESETS = 'SIMSARPRAS_CUSTOM_PRESETS_V40';
+        const STORAGE_KEY_PIN = 'SIMSARPRAS_PIN_V40';
+
+        // --- INITIALIZATION ---
+        window.onload = function () {
+            loadStorageData();
+            populateRoleDropdownOptions();
+            renderApp();
+        };
+
+        function loadStorageData() {
+            try {
+                const storedItems = localStorage.getItem(STORAGE_KEY_ITEMS);
+                const storedStatuses = localStorage.getItem(STORAGE_KEY_STATUS);
+                const storedProfiles = localStorage.getItem(STORAGE_KEY_PROFILES);
+                const storedHeadmaster = localStorage.getItem(STORAGE_KEY_HEADMASTER);
+                const storedSchool = localStorage.getItem(STORAGE_KEY_SCHOOL);
+                const storedCustom = localStorage.getItem(STORAGE_KEY_CUSTOM_PRESETS);
+                const storedPin = localStorage.getItem(STORAGE_KEY_PIN);
+
+                if (storedPin) {
+                    state.sarprasPin = storedPin;
+                } else {
+                    state.sarprasPin = '1234';
+                    savePinToStorage();
+                }
+
+                if (storedItems) {
+                    state.items = JSON.parse(storedItems);
+                } else {
+                    state.items = [...INITIAL_SAMPLE_ITEMS];
+                    saveItemsToStorage();
+                }
+
+                if (storedStatuses) {
+                    state.roomStatuses = JSON.parse(storedStatuses);
+                } else {
+                    state.roomStatuses = { ...INITIAL_ROOM_STATUS };
+                    saveStatusToStorage();
+                }
+
+                if (storedProfiles) {
+                    state.roomProfiles = JSON.parse(storedProfiles);
+                    // Sanitasi jika masih ada nama contoh lama tersimpan di LocalStorage
+                    Object.keys(state.roomProfiles).forEach(id => {
+                        const p = state.roomProfiles[id];
+                        if (p && p.picName && (p.picName.includes('Endang') || p.picName.includes('Bambang') || p.picName.includes('Siti') || p.picName.includes('Supriyadi'))) {
+                            p.picName = '';
+                            p.picNip = '';
+                        }
+                    });
+                    saveProfilesToStorage();
+                } else {
+                    ROOM_LIST.forEach(r => {
+                        state.roomProfiles[r.id] = {
+                            picTitle: r.picTitle,
+                            picName: '',
+                            picNip: ''
+                        };
+                    });
+                    saveProfilesToStorage();
+                }
+
+                if (storedHeadmaster) {
+                    state.headmaster = JSON.parse(storedHeadmaster);
+                    if (state.headmaster.name && state.headmaster.name.includes('Ahmad Dahlan')) {
+                        state.headmaster = { name: '', nip: '', jabatan: 'Kepala Sekolah' };
+                        saveHeadmasterToStorage();
+                    }
+                } else {
+                    state.headmaster = { ...DEFAULT_HEADMASTER };
+                    saveHeadmasterToStorage();
+                }
+
+                if (storedSchool) {
+                    state.schoolInfo = JSON.parse(storedSchool);
+                } else {
+                    state.schoolInfo = {
+                        name: 'SMP NEGERI 1 UNGGULAN',
+                        address: 'Jl. Pendidikan No. 123, Kabupaten/Kota - Telepon: (021) 555-0199 | Website: www.sekolah.sch.id'
+                    };
+                    saveSchoolToStorage();
+                }
+
+                if (storedCustom) {
+                    state.customPresets = JSON.parse(storedCustom);
+                } else {
+                    state.customPresets = [];
+                }
+            } catch (e) {
+                console.error("Gagal membaca LocalStorage, menggunakan data default.", e);
+                state.items = [...INITIAL_SAMPLE_ITEMS];
+                state.roomStatuses = { ...INITIAL_ROOM_STATUS };
+            }
+        }
+
+        function saveItemsToStorage() { localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(state.items)); }
+        function saveStatusToStorage() { localStorage.setItem(STORAGE_KEY_STATUS, JSON.stringify(state.roomStatuses)); }
+        function saveProfilesToStorage() { localStorage.setItem(STORAGE_KEY_PROFILES, JSON.stringify(state.roomProfiles)); }
+        function saveHeadmasterToStorage() { localStorage.setItem(STORAGE_KEY_HEADMASTER, JSON.stringify(state.headmaster)); }
+        function saveSchoolToStorage() { localStorage.setItem(STORAGE_KEY_SCHOOL, JSON.stringify(state.schoolInfo)); }
+        function saveCustomPresetsToStorage() { localStorage.setItem(STORAGE_KEY_CUSTOM_PRESETS, JSON.stringify(state.customPresets)); }
+        function savePinToStorage() { localStorage.setItem(STORAGE_KEY_PIN, state.sarprasPin); }
+
+        function populateRoleDropdownOptions() {
+            const roleSelect = document.getElementById('select-active-role');
+            if (!roleSelect) return;
+
+            const optGroup = roleSelect.querySelector('optgroup');
+            if (!optGroup) return;
+
+            optGroup.innerHTML = ROOM_LIST.map(r => {
+                const profile = state.roomProfiles[r.id] || { picTitle: r.picTitle };
+                return `<option value="ROOM_${r.id}">${profile.picTitle} (${r.name})</option>`;
+            }).join('');
+        }
+
+        function onRoleDropdownChange(val) {
+            if (val === 'SARPRAS') {
+                if (!state.isSarprasUnlocked) {
+                    openPinModal();
+                    return;
+                }
+                state.currentRole = 'SARPRAS';
+            } else if (val.startsWith('ROOM_')) {
+                state.currentRole = 'PEMEGANG';
+                state.selectedRoomId = val.replace('ROOM_', '');
+            }
+            renderApp();
+            showToast(`Peran aktif diperbarui`, 'info');
+        }
+
+        // --- PIN PROTEKSI TIM SARPRAS HANDLERS ---
+        function openPinModal() {
+            const modal = document.getElementById('pin-modal');
+            const input = document.getElementById('input-sarpras-pin');
+            const err = document.getElementById('pin-error-msg');
+            if (input) input.value = '';
+            if (err) err.classList.add('hidden');
+            if (modal) modal.classList.remove('hidden');
+            setTimeout(() => { if (input) input.focus(); }, 100);
+        }
+
+        function closePinModal() {
+            const modal = document.getElementById('pin-modal');
+            if (modal) modal.classList.add('hidden');
+            const selectRole = document.getElementById('select-active-role');
+            if (selectRole) {
+                selectRole.value = state.currentRole === 'SARPRAS' ? 'SARPRAS' : `ROOM_${state.selectedRoomId}`;
+            }
+        }
+
+        function verifySarprasPin(e) {
+            if (e) e.preventDefault();
+            const input = document.getElementById('input-sarpras-pin');
+            const err = document.getElementById('pin-error-msg');
+            const enteredPin = input ? input.value.trim() : '';
+
+            if (enteredPin === state.sarprasPin) {
+                state.isSarprasUnlocked = true;
+                state.currentRole = 'SARPRAS';
+                closePinModal();
+                renderApp();
+                showToast('Akses Tim Sarpras Berhasil Dibuka!', 'success');
+            } else {
+                if (err) {
+                    err.innerText = 'PIN Salah! Hanya Tim Sarpras yang dapat mengakses.';
+                    err.classList.remove('hidden');
+                }
+                showToast('PIN Salah! Akses Tim Sarpras ditolak.', 'warning');
+            }
+        }
+
+        function lockSarprasAccess() {
+            state.isSarprasUnlocked = false;
+            state.currentRole = 'PEMEGANG';
+            renderApp();
+            showToast('Panel Tim Sarpras telah dikunci kembali', 'info');
+        }
+
+        // --- PROFILE & NIP MODAL HANDLERS ---
+        function openProfileModal() {
+            const modal = document.getElementById('profile-modal');
+            const currentRoom = ROOM_LIST.find(r => r.id === state.selectedRoomId) || ROOM_LIST[0];
+            const picProfile = state.roomProfiles[currentRoom.id] || { picTitle: currentRoom.picTitle, picName: currentRoom.picName, picNip: currentRoom.picNip };
+
+            document.getElementById('profile-school-name').value = state.schoolInfo?.name || 'SMP NEGERI 1 UNGGULAN';
+            document.getElementById('profile-school-address').value = state.schoolInfo?.address || 'Jl. Pendidikan No. 123, Kabupaten/Kota';
+            document.getElementById('profile-sarpras-pin').value = state.sarprasPin || '1234';
+
+            document.getElementById('profile-headmaster-name').value = state.headmaster.name || '';
+            document.getElementById('profile-headmaster-nip').value = state.headmaster.nip || '';
+
+            document.getElementById('profile-room-title').innerText = currentRoom.name;
+            document.getElementById('profile-room-id').value = currentRoom.id;
+            document.getElementById('profile-pic-title').value = picProfile.picTitle || '';
+            document.getElementById('profile-pic-name').value = picProfile.picName || '';
+            document.getElementById('profile-pic-nip').value = picProfile.picNip || '';
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profile-modal').classList.add('hidden');
+        }
+
+        function clearProfileFormInputs() {
+            document.getElementById('profile-school-name').value = '';
+            document.getElementById('profile-school-address').value = '';
+            document.getElementById('profile-headmaster-name').value = '';
+            document.getElementById('profile-headmaster-nip').value = '';
+            document.getElementById('profile-pic-title').value = '';
+            document.getElementById('profile-pic-name').value = '';
+            document.getElementById('profile-pic-nip').value = '';
+            showToast('Seluruh isian profil telah dikosongkan. Klik "Simpan" untuk menerapkan.', 'info');
+        }
+
+        function handleProfileFormSubmit(e) {
+            e.preventDefault();
+
+            const roomId = document.getElementById('profile-room-id').value;
+            
+            // Simpan PIN Sarpras
+            state.sarprasPin = document.getElementById('profile-sarpras-pin').value.trim() || '1234';
+            savePinToStorage();
+
+            // Simpan Identitas Sekolah
+            state.schoolInfo = {
+                name: document.getElementById('profile-school-name').value.trim() || '....................................................',
+                address: document.getElementById('profile-school-address').value.trim() || '....................................................'
+            };
+            saveSchoolToStorage();
+
+            // Simpan Profil Kepala Sekolah
+            state.headmaster = {
+                name: document.getElementById('profile-headmaster-name').value.trim() || '...........................................',
+                nip: document.getElementById('profile-headmaster-nip').value.trim() || '...........................................',
+                jabatan: 'Kepala Sekolah'
+            };
+            saveHeadmasterToStorage();
+
+            // Simpan Profil Penanggung Jawab Ruangan Aktif
+            if (roomId) {
+                state.roomProfiles[roomId] = {
+                    picTitle: document.getElementById('profile-pic-title').value.trim() || 'Penanggung Jawab Ruangan',
+                    picName: document.getElementById('profile-pic-name').value.trim() || '...........................................',
+                    picNip: document.getElementById('profile-pic-nip').value.trim() || '...........................................'
+                };
+                saveProfilesToStorage();
+            }
+
+            populateRoleDropdownOptions();
+            closeProfileModal();
+            renderApp();
+            showToast('Identitas Sekolah, PIN & Profil Tanda Tangan berhasil diperbarui', 'success');
+        }
+
+        // FUNCTION TO CLEAR ALL INVENTORY DATA (RESET TO 0 ITEMS)
+        function clearAllInventoryData() {
+            showConfirmDialog(
+                'Kosongkan Seluruh Data Inventaris',
+                'Apakah Anda yakin ingin menghapus seluruh data barang inventaris dan mereset status pelaporan semua ruangan menjadi 0 item?',
+                () => {
+                    state.items = [];
+                    state.roomStatuses = {};
+                    saveItemsToStorage();
+                    saveStatusToStorage();
+                    renderApp();
+                    showToast('Seluruh data inventaris berhasil dikosongkan (0 barang)', 'success');
+                }
+            );
+        }
+
+        function resetDataToDefault() {
+            clearAllInventoryData();
+        }
+
+        // --- PRINT PREVIEW & PRINTING FUNCTIONS ---
+        function openPrintModal(title, htmlContent) {
+            document.getElementById('print-modal-title').innerText = title;
+            document.getElementById('print-modal-body').innerHTML = htmlContent;
+            
+            const printableArea = document.getElementById('printable-area');
+            if (printableArea) {
+                printableArea.innerHTML = htmlContent;
+            }
+            
+            document.getElementById('print-modal').classList.remove('hidden');
+        }
+
+        function closePrintModal() {
+            document.getElementById('print-modal').classList.add('hidden');
+            const printableArea = document.getElementById('printable-area');
+            if (printableArea) {
+                printableArea.classList.add('hidden');
+            }
+        }
+
+        function executeBrowserPrint() {
+            const printableArea = document.getElementById('printable-area');
+            const content = printableArea ? printableArea.innerHTML : '';
+            
+            if (!content || !content.trim()) {
+                showToast('Tidak ada dokumen untuk dicetak', 'warning');
+                return;
+            }
+
+            // Tampilkan printable area untuk cetak utama
+            printableArea.classList.remove('hidden');
+
+            try {
+                // Panggil dialog cetak langsung browser
+                window.print();
+            } catch (err) {
+                console.error("Direct print error, falling back to popup window:", err);
+                openPrintWindowFallback();
+            } finally {
+                // Sembunyikan kembali setelah dipicu
+                setTimeout(() => {
+                    printableArea.classList.add('hidden');
+                }, 1000);
+            }
+        }
+
+        function openPrintWindowFallback() {
+            const printableArea = document.getElementById('printable-area');
+            const content = printableArea ? printableArea.innerHTML : '';
+            
+            if (!content || !content.trim()) {
+                showToast('Tidak ada dokumen untuk dicetak', 'warning');
+                return;
+            }
+
+            const printWin = window.open('', '_blank', 'width=950,height=750');
+            if (printWin) {
+                printWin.document.write(`
+                    <!DOCTYPE html>
+                    <html lang="id">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Cetak Dokumen BAST SIMSARPRAS</title>
+                        <script src="https://cdn.tailwindcss.com"><\/script>
+                        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                        <style>
+                            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+                            body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; padding: 20px; }
+                            @media print {
+                                .no-print { display: none !important; }
+                                body { background: white !important; padding: 0 !important; margin: 0 !important; }
+                                @page { size: auto; margin: 12mm; }
+                            }
+                        </style>
+                    </head>
+                    <body class="p-4 sm:p-8">
+                        <div class="no-print mb-6 flex justify-between items-center bg-slate-900 text-white p-4 rounded-xl shadow-lg">
+                            <span class="font-bold text-sm text-emerald-400"><i class="fa-solid fa-print mr-2"></i> Mode Pratinjau Cetak / Simpan PDF</span>
+                            <div class="flex items-center gap-2">
+                                <button onclick="window.print()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-xs rounded-xl shadow transition">
+                                    🖨️ Cetak / Simpan PDF
+                                </button>
+                                <button onclick="window.close()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition">
+                                    Tutup
+                                </button>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                            ${content}
+                        </div>
+                    </body>
+                    </html>
+                `);
+                printWin.document.close();
+                printWin.focus();
+                setTimeout(() => {
+                    try {
+                        printWin.print();
+                    } catch (e) {
+                        console.log("Popup window print complete.");
+                    }
+                }, 500);
+            } else {
+                showToast('Pop-up diblokir browser. Izinkan pop-up atau gunakan tombol "Cetak Langsung".', 'warning');
+            }
+        }
+
+        function triggerPrintRoomReport(roomId) {
+            const room = ROOM_LIST.find(r => r.id === roomId) || ROOM_LIST[0];
+            const picProfile = state.roomProfiles[room.id] || { picTitle: room.picTitle, picName: room.picName, picNip: room.picNip };
+            const headmaster = state.headmaster;
+            const school = state.schoolInfo || { name: 'SMP NEGERI 1 UNGGULAN', address: 'Jl. Pendidikan No. 123' };
+            const items = state.items.filter(i => i.roomId === roomId);
+
+            const docHtml = `
+                <div class="space-y-6 font-sans bg-white p-4 sm:p-8 rounded-xl shadow-sm border border-slate-200 text-slate-900">
+                    <!-- KOP SURAT SEKOLAH -->
+                    <div class="text-center border-b-2 border-slate-900 pb-4">
+                        <h2 class="text-sm sm:text-base font-bold uppercase tracking-wide text-slate-700">DINAS PENDIDIKAN DAN KEBUDAYAAN</h2>
+                        <h1 class="text-lg sm:text-2xl font-black uppercase tracking-wider text-slate-900">${escapeHtml(school.name)}</h1>
+                        <p class="text-xs text-slate-600">${escapeHtml(school.address)}</p>
+                    </div>
+
+                    <div class="text-center py-2">
+                        <h3 class="text-base sm:text-lg font-bold underline uppercase text-slate-900">BERITA ACARA PENDATAAN INVENTARIS RUANGAN</h3>
+                        <p class="text-xs text-slate-500">Nomor: SARPRAS/INV/${room.code}/${new Date().getFullYear()}</p>
+                    </div>
+
+                    <!-- METADATA INFORMATION WITH ALIGNED COLONS -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1.5 text-xs border border-slate-300 p-3.5 rounded-lg bg-slate-50">
+                        <div class="space-y-1.5">
+                            <div class="flex">
+                                <span class="w-32 font-bold text-slate-700 shrink-0">Nama Ruangan</span>
+                                <span class="w-3 text-center font-bold text-slate-900">:</span>
+                                <span class="font-bold text-slate-900">${room.name}</span>
+                            </div>
+                            <div class="flex">
+                                <span class="w-32 font-bold text-slate-700 shrink-0">Tipe / Kode Ruang</span>
+                                <span class="w-3 text-center font-bold text-slate-900">:</span>
+                                <span class="font-medium text-slate-800">${room.type} (${room.code})</span>
+                            </div>
+                        </div>
+                        <div class="space-y-1.5">
+                            <div class="flex">
+                                <span class="w-32 font-bold text-slate-700 shrink-0">Penanggung Jawab</span>
+                                <span class="w-3 text-center font-bold text-slate-900">:</span>
+                                <span class="font-bold text-slate-900">${escapeHtml(picProfile.picName) || '...........................................'} (${picProfile.picTitle})</span>
+                            </div>
+                            <div class="flex">
+                                <span class="w-32 font-bold text-slate-700 shrink-0">Tanggal Cetak</span>
+                                <span class="w-3 text-center font-bold text-slate-900">:</span>
+                                <span class="font-medium text-slate-800">${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TABEL DENGAN KODE BARANG & MERK -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse border border-slate-400 text-xs">
+                            <thead>
+                                <tr class="bg-slate-200 border-b border-slate-400 font-bold text-slate-900">
+                                    <th class="border border-slate-400 p-2 text-center">No</th>
+                                    <th class="border border-slate-400 p-2">Kode Barang</th>
+                                    <th class="border border-slate-400 p-2">Nama Barang</th>
+                                    <th class="border border-slate-400 p-2">Merk</th>
+                                    <th class="border border-slate-400 p-2">Kategori</th>
+                                    <th class="border border-slate-400 p-2">Jenis Barang</th>
+                                    <th class="border border-slate-400 p-2 text-center">Jumlah</th>
+                                    <th class="border border-slate-400 p-2 text-center">Satuan</th>
+                                    <th class="border border-slate-400 p-2 text-center">Kondisi</th>
+                                    <th class="border border-slate-400 p-2">Catatan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${items.length === 0 ? `
+                                    <tr><td colspan="10" class="border border-slate-400 p-4 text-center text-slate-500 font-semibold">Tidak ada item terdata di ruangan ini.</td></tr>
+                                ` : items.map((it, idx) => {
+                                    const cat = ITEM_CATEGORIES[it.categoryKey] || { name: '-' };
+                                    return `
+                                        <tr>
+                                            <td class="border border-slate-400 p-2 text-center">${idx + 1}</td>
+                                            <td class="border border-slate-400 p-2 font-mono font-bold">${it.code}</td>
+                                            <td class="border border-slate-400 p-2 font-bold">${escapeHtml(it.namaBarang)}</td>
+                                            <td class="border border-slate-400 p-2 font-semibold">${escapeHtml(it.merk || '-')}</td>
+                                            <td class="border border-slate-400 p-2">${cat.name}</td>
+                                            <td class="border border-slate-400 p-2">${escapeHtml(it.jenisBarang || '-')}</td>
+                                            <td class="border border-slate-400 p-2 text-center font-bold">${it.jumlah}</td>
+                                            <td class="border border-slate-400 p-2 text-center">${it.satuan}</td>
+                                            <td class="border border-slate-400 p-2 text-center font-semibold">${it.condition}</td>
+                                            <td class="border border-slate-400 p-2">${escapeHtml(it.notes || '-')}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- TANDA TANGAN LENGKAP PENANGGUNG JAWAB & KEPALA SEKOLAH -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-8 text-xs text-center">
+                        <div class="space-y-1">
+                            <p class="text-slate-700">Pemegang / Pengelola Ruangan,<br><strong class="text-slate-900">${picProfile.picTitle || 'Penanggung Jawab'}</strong></p>
+                            <div class="h-16"></div>
+                            <p class="font-bold underline text-slate-900">${escapeHtml(picProfile.picName) || '...........................................'}</p>
+                            <p class="text-[11px] text-slate-600">NIP. ${escapeHtml(picProfile.picNip) || '...........................................'}</p>
+                        </div>
+                        <div class="space-y-1">
+                            <p class="text-slate-700">Pemeriksa / Verifikator,<br><strong class="text-slate-900">Tim Sarana & Prasarana</strong></p>
+                            <div class="h-16"></div>
+                            <p class="font-bold underline text-slate-900">Koordinator Sarpras</p>
+                            <p class="text-[11px] text-slate-600">NIP. ...........................................</p>
+                        </div>
+                        <div class="space-y-1">
+                            <p class="text-slate-700">Mengetahui,<br><strong class="text-slate-900">Kepala Sekolah</strong></p>
+                            <div class="h-16"></div>
+                            <p class="font-bold underline text-slate-900">${escapeHtml(headmaster.name) || '...........................................'}</p>
+                            <p class="text-[11px] text-slate-600">NIP. ${escapeHtml(headmaster.nip) || '...........................................'}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            openPrintModal(`BAST Ruangan: ${room.name}`, docHtml);
+        }
+
+        function triggerPrintMasterReport() {
+            const headmaster = state.headmaster;
+            const school = state.schoolInfo || { name: 'SMP NEGERI 1 UNGGULAN', address: 'Jl. Pendidikan No. 123' };
+            const items = state.items;
+
+            const docHtml = `
+                <div class="space-y-6 font-sans bg-white p-4 sm:p-8 rounded-xl shadow-sm border border-slate-200 text-slate-900">
+                    <div class="text-center border-b-2 border-slate-900 pb-4">
+                        <h2 class="text-sm sm:text-base font-bold uppercase tracking-wide text-slate-700">DINAS PENDIDIKAN DAN KEBUDAYAAN</h2>
+                        <h1 class="text-lg sm:text-2xl font-black uppercase tracking-wider text-slate-900">${escapeHtml(school.name)}</h1>
+                        <p class="text-xs text-slate-600">${escapeHtml(school.address)}</p>
+                    </div>
+
+                    <div class="text-center py-2">
+                        <h3 class="text-base sm:text-lg font-bold underline uppercase text-slate-900">MASTER REKAPITULASI INVENTARIS ASET SEKOLAH (22 RUANGAN)</h3>
+                        <p class="text-xs text-slate-500">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}</p>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse border border-slate-400 text-xs">
+                            <thead>
+                                <tr class="bg-slate-200 border-b border-slate-400 font-bold text-slate-900">
+                                    <th class="border border-slate-400 p-2 text-center">No</th>
+                                    <th class="border border-slate-400 p-2">Kode Barang</th>
+                                    <th class="border border-slate-400 p-2">Ruangan</th>
+                                    <th class="border border-slate-400 p-2">Nama Barang</th>
+                                    <th class="border border-slate-400 p-2">Merk</th>
+                                    <th class="border border-slate-400 p-2">Kategori</th>
+                                    <th class="border border-slate-400 p-2">Jenis Barang</th>
+                                    <th class="border border-slate-400 p-2 text-center">Jumlah</th>
+                                    <th class="border border-slate-400 p-2 text-center">Satuan</th>
+                                    <th class="border border-slate-400 p-2 text-center">Kondisi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${items.length === 0 ? `
+                                    <tr><td colspan="10" class="border border-slate-400 p-4 text-center text-slate-500 font-semibold">Belum ada data barang inventaris di sekolah.</td></tr>
+                                ` : items.map((it, idx) => {
+                                    const rm = ROOM_LIST.find(rm => rm.id === it.roomId) || { name: it.roomId };
+                                    const cat = ITEM_CATEGORIES[it.categoryKey] || { name: '-' };
+                                    return `
+                                        <tr>
+                                            <td class="border border-slate-400 p-2 text-center">${idx + 1}</td>
+                                            <td class="border border-slate-400 p-2 font-mono font-bold">${it.code}</td>
+                                            <td class="border border-slate-400 p-2 font-semibold">${rm.name}</td>
+                                            <td class="border border-slate-400 p-2 font-bold">${escapeHtml(it.namaBarang)}</td>
+                                            <td class="border border-slate-400 p-2 font-semibold">${escapeHtml(it.merk || '-')}</td>
+                                            <td class="border border-slate-400 p-2">${cat.name}</td>
+                                            <td class="border border-slate-400 p-2">${escapeHtml(it.jenisBarang || '-')}</td>
+                                            <td class="border border-slate-400 p-2 text-center font-bold">${it.jumlah}</td>
+                                            <td class="border border-slate-400 p-2 text-center">${it.satuan}</td>
+                                            <td class="border border-slate-400 p-2 text-center font-semibold">${it.condition}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-8 text-xs text-center">
+                        <div class="space-y-1">
+                            <p class="text-slate-700">Penanggung Jawab Sarpras Sekolah,</p>
+                            <div class="h-16"></div>
+                            <p class="font-bold underline text-slate-900">Koordinator Tim Sarpras</p>
+                            <p class="text-[11px] text-slate-600">NIP. ...........................................</p>
+                        </div>
+                        <div class="space-y-1">
+                            <p class="text-slate-700">Mengetahui,<br><strong class="text-slate-900">Kepala Sekolah</strong></p>
+                            <div class="h-16"></div>
+                            <p class="font-bold underline text-slate-900">${escapeHtml(headmaster.name) || '...........................................'}</p>
+                            <p class="text-[11px] text-slate-600">NIP. ${escapeHtml(headmaster.nip) || '...........................................'}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            openPrintModal("Master Rekapitulasi Inventaris Sekolah", docHtml);
+        }
+
+        // --- UI BADGE HELPERS ---
+        function getConditionBadgeHtml(condition) {
+            switch (condition) {
+                case 'Baik':
+                    return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                Baik
+                            </span>`;
+                case 'Rusak Ringan':
+                    return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                                Rusak Ringan
+                            </span>`;
+                case 'Rusak Berat':
+                    return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+                                Rusak Berat
+                            </span>`;
+                default:
+                    return `<span class="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600">${condition}</span>`;
+            }
+        }
+
+        function getStatusBadgeHtml(status, isVerified = false, compact = false) {
+            if (isVerified) {
+                return `<span class="inline-flex items-center gap-1 ${compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs'} rounded-lg font-bold bg-emerald-500 text-slate-950 shadow-sm">
+                            <i class="fa-solid fa-check-circle"></i>
+                            ${compact ? 'Verified' : 'Diverifikasi Sarpras'}
+                        </span>`;
+            }
+            if (status === 'Terkirim') {
+                return `<span class="inline-flex items-center gap-1 ${compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs'} rounded-lg font-bold bg-sky-100 text-sky-800 border border-sky-300">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            ${compact ? 'Terkirim' : 'Terkirim ke Sarpras'}
+                        </span>`;
+            }
+            return `<span class="inline-flex items-center gap-1 ${compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs'} rounded-lg font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                        <i class="fa-regular fa-clock"></i>
+                        ${compact ? 'Draf' : 'Draf Laporan'}
+                    </span>`;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        // --- TOAST NOTIFICATION SYSTEM ---
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            let typeClasses = 'bg-slate-900 text-white';
+            let icon = 'fa-circle-info text-sky-400';
+
+            if (type === 'success') {
+                typeClasses = 'bg-slate-900 border border-emerald-500 text-white shadow-emerald-950/20';
+                icon = 'fa-circle-check text-emerald-400';
+            } else if (type === 'warning') {
+                typeClasses = 'bg-slate-900 border border-amber-500 text-white';
+                icon = 'fa-triangle-exclamation text-amber-400';
+            }
+
+            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl text-xs sm:text-sm font-semibold transition-all duration-300 transform translate-y-2 opacity-0 ${typeClasses}`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-base"></i><span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // --- CUSTOM CONFIRM DIALOG ---
+        function showConfirmDialog(title, message, onOk) {
+            const modal = document.getElementById('confirm-modal');
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-message').innerText = message;
+
+            const btnOk = document.getElementById('confirm-btn-ok');
+            const btnCancel = document.getElementById('confirm-btn-cancel');
+
+            const handleOk = () => {
+                cleanup();
+                onOk();
+            };
+
+            const cleanup = () => {
+                modal.classList.add('hidden');
+                btnOk.removeEventListener('click', handleOk);
+                btnCancel.removeEventListener('click', cleanup);
+            };
+
+            btnOk.addEventListener('click', handleOk);
+            btnCancel.addEventListener('click', cleanup);
+
+            modal.classList.remove('hidden');
+        }
+
+        // --- CORE APPLICATION RENDERING FUNCTIONS ---
+        function renderApp() {
+            // Synchronize dropdown selector UI with active state
+            const roleSelect = document.getElementById('select-active-role');
+            if (roleSelect) {
+                roleSelect.value = state.currentRole === 'SARPRAS' ? 'SARPRAS' : `ROOM_${state.selectedRoomId}`;
+            }
+
+            renderSubHeader();
+            const mainContent = document.getElementById('main-content');
+            if (!mainContent) return;
+
+            if (state.currentRole === 'SARPRAS') {
+                renderSarprasView(mainContent);
+            } else {
+                renderPemegangView(mainContent);
+            }
+        }
+
+        function renderSubHeader() {
+            const subHeader = document.getElementById('sub-header-bar');
+            if (!subHeader) return;
+
+            if (state.currentRole === 'SARPRAS') {
+                const totalItems = state.items.reduce((acc, it) => acc + (parseInt(it.jumlah) || 0), 0);
+                subHeader.innerHTML = `
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap justify-between items-center gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="px-2.5 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg font-bold text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-shield-halved"></i> Tim Sarpras Admin Panel
+                            </div>
+                            <span class="text-xs text-slate-500 font-medium hidden sm:inline">Rekapitulasi 22 Ruangan Sekolah | Total ${totalItems} Unit/Barang</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="triggerPrintMasterReport()" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-print text-emerald-400"></i> Cetak Master Rekap
+                            </button>
+                            <button onclick="lockSarprasAccess()" class="px-3 py-1.5 bg-rose-900/60 hover:bg-rose-800 text-rose-200 border border-rose-700/60 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm" title="Kunci kembali panel khusus Tim Sarpras">
+                                <i class="fa-solid fa-lock"></i> Kunci Panel
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const room = ROOM_LIST.find(r => r.id === state.selectedRoomId) || ROOM_LIST[0];
+                const statusObj = state.roomStatuses[room.id] || { status: 'Draf', isVerified: false };
+                const roomItems = state.items.filter(i => i.roomId === room.id);
+                const roomTotalQty = roomItems.reduce((acc, it) => acc + (parseInt(it.jumlah) || 0), 0);
+
+                subHeader.innerHTML = `
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap justify-between items-center gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="px-3 py-1 bg-slate-900 text-white rounded-xl text-xs font-extrabold flex items-center gap-2">
+                                <i class="fa-solid fa-door-open text-emerald-400"></i> ${room.name} (${room.code})
+                            </div>
+                            ${getStatusBadgeHtml(statusObj.status, statusObj.isVerified)}
+                            <span class="text-xs text-slate-500 font-semibold hidden md:inline">Total: ${roomItems.length} jenis (${roomTotalQty} item)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="submitRoomReport('${room.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-paper-plane"></i> Kirim ke Sarpras
+                            </button>
+                            <button onclick="triggerPrintRoomReport('${room.id}')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-print text-emerald-400"></i> Cetak BAST
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // --- PEMEGANG RUANGAN VIEW ---
+        function renderPemegangView(container) {
+            const room = ROOM_LIST.find(r => r.id === state.selectedRoomId) || ROOM_LIST[0];
+            const roomItems = state.items.filter(i => i.roomId === room.id);
+            const profile = state.roomProfiles[room.id] || { picTitle: room.picTitle, picName: room.picName, picNip: room.picNip };
+
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-4 sm:p-6 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 font-bold text-xs border border-emerald-500/30">${room.type}</span>
+                                <h2 class="text-lg sm:text-2xl font-extrabold text-white">${room.name}</h2>
+                            </div>
+                            <p class="text-xs text-slate-300 flex items-center gap-2">
+                                <i class="fa-solid fa-user-gear text-emerald-400"></i>
+                                Penanggung Jawab: <span class="font-bold text-white">${escapeHtml(profile.picName) || '<i class="text-slate-400 font-normal">Belum diisi</i>'}</span> (${profile.picTitle})
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2 w-full md:w-auto">
+                            <button onclick="openItemModal(null)" class="w-full md:w-auto justify-center px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-xs sm:text-sm rounded-xl shadow-lg hover:shadow-emerald-500/25 transition flex items-center gap-2">
+                                <i class="fa-solid fa-plus text-sm"></i>
+                                <span>Tambah Barang Inventaris</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <h3 class="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-list-check text-emerald-600"></i>
+                                Daftar Barang Inventaris Ruangan (${roomItems.length})
+                            </h3>
+                        </div>
+
+                        <!-- MOBILE CARD VIEW (Tampilan khusus HP - Nyaman, Modern & Responsif) -->
+                        <div class="block md:hidden divide-y divide-slate-100">
+                            ${roomItems.length === 0 ? `
+                                <div class="p-8 text-center text-slate-400">
+                                    <i class="fa-solid fa-box-open text-3xl mb-2 text-slate-300"></i>
+                                    <p class="font-semibold text-xs">Belum ada barang inventaris terdaftar di ${room.name}.</p>
+                                    <p class="text-[11px] mt-0.5">Klik "Tambah Barang Inventaris" untuk mencatat.</p>
+                                </div>
+                            ` : roomItems.map(it => {
+                                const cat = ITEM_CATEGORIES[it.categoryKey] || { name: it.categoryKey };
+                                return `
+                                    <div class="p-4 space-y-2.5 hover:bg-slate-50/80 transition">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="font-mono font-bold text-xs text-emerald-800 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md">${it.code}</span>
+                                            ${getConditionBadgeHtml(it.condition)}
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-sm text-slate-900 leading-snug">${escapeHtml(it.namaBarang)}</h4>
+                                            <div class="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-slate-500">
+                                                <span class="bg-emerald-100/70 text-emerald-800 font-bold px-2 py-0.5 rounded">Merk: ${escapeHtml(it.merk || 'Tanpa Merk')}</span>
+                                                <span>•</span>
+                                                <span class="bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded">${cat.name}</span>
+                                                <span>•</span>
+                                                <span class="font-medium text-slate-700">${escapeHtml(it.jenisBarang || '-')}</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
+                                            <div class="text-slate-700">
+                                                <span class="text-slate-400">Jumlah:</span> <strong class="text-slate-900 text-sm font-black">${it.jumlah}</strong> ${escapeHtml(it.satuan)}
+                                            </div>
+                                            <div class="flex items-center gap-1.5">
+                                                <button onclick="editItem('${it.id}')" title="Edit Barang" class="px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-bold flex items-center gap-1 transition">
+                                                    <i class="fa-solid fa-pen-to-square"></i> Edit
+                                                </button>
+                                                <button onclick="deleteItem('${it.id}')" title="Hapus Barang" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center gap-1 transition">
+                                                    <i class="fa-solid fa-trash-can"></i> Hapus
+                                                </button>
+                                            </div>
+                                        </div>
+                                        ${it.notes ? `<div class="text-[11px] text-slate-500 italic bg-slate-50 p-2 rounded-lg border border-slate-100"><i class="fa-regular fa-comment-dots mr-1"></i>${escapeHtml(it.notes)}</div>` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+
+                        <!-- DESKTOP TABLE VIEW (Tampilan Layar Komputer / Tablet) -->
+                        <div class="hidden md:block overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-100/80 text-slate-600 font-extrabold uppercase border-b border-slate-200 tracking-wider text-[11px]">
+                                        <th class="py-3 px-4 whitespace-nowrap">Kode Barang</th>
+                                        <th class="py-3 px-4">Nama Barang</th>
+                                        <th class="py-3 px-4 whitespace-nowrap">Merk / Brand</th>
+                                        <th class="py-3 px-4 whitespace-nowrap">Kategori</th>
+                                        <th class="py-3 px-4 whitespace-nowrap">Jenis Barang</th>
+                                        <th class="py-3 px-3 text-center whitespace-nowrap">Jumlah</th>
+                                        <th class="py-3 px-3 text-center whitespace-nowrap">Satuan</th>
+                                        <th class="py-3 px-3 text-center whitespace-nowrap">Kondisi</th>
+                                        <th class="py-3 px-4">Catatan / Tanggal</th>
+                                        <th class="py-3 px-4 text-center whitespace-nowrap">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 font-medium">
+                                    ${roomItems.length === 0 ? `
+                                        <tr>
+                                            <td colspan="10" class="p-12 text-center text-slate-400">
+                                                <i class="fa-solid fa-box-open text-4xl mb-3 text-slate-300"></i>
+                                                <p class="font-semibold text-sm">Belum ada barang inventaris terdaftar di ${room.name}.</p>
+                                                <p class="text-xs mt-1">Klik tombol "Tambah Barang Inventaris" di atas untuk mulai mencatat.</p>
+                                            </td>
+                                        </tr>
+                                    ` : roomItems.map(it => {
+                                        const cat = ITEM_CATEGORIES[it.categoryKey] || { name: it.categoryKey };
+                                        return `
+                                            <tr class="hover:bg-slate-50/80 transition align-middle">
+                                                <td class="py-3 px-4 whitespace-nowrap">
+                                                    <span class="inline-block font-mono font-bold text-xs text-emerald-900 bg-emerald-50 border border-emerald-200/80 rounded-md px-2.5 py-1 tracking-wider">${it.code}</span>
+                                                </td>
+                                                <td class="py-3 px-4 font-bold text-slate-900">${escapeHtml(it.namaBarang)}</td>
+                                                <td class="py-3 px-4 whitespace-nowrap font-bold text-emerald-900">${escapeHtml(it.merk || '-')}</td>
+                                                <td class="py-3 px-4 whitespace-nowrap">
+                                                    <span class="inline-block px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 font-semibold border border-slate-200/60">${cat.name}</span>
+                                                </td>
+                                                <td class="py-3 px-4 whitespace-nowrap text-slate-800 font-semibold">${escapeHtml(it.jenisBarang || '-')}</td>
+                                                <td class="py-3 px-3 text-center font-extrabold text-slate-900 text-sm whitespace-nowrap">${it.jumlah}</td>
+                                                <td class="py-3 px-3 text-center font-semibold text-slate-600 whitespace-nowrap">${escapeHtml(it.satuan)}</td>
+                                                <td class="py-3 px-3 text-center whitespace-nowrap">${getConditionBadgeHtml(it.condition)}</td>
+                                                <td class="py-3 px-4 text-slate-500">
+                                                    <div class="truncate max-w-xs">${escapeHtml(it.notes || '-')}</div>
+                                                    <div class="text-[10px] text-slate-400 mt-0.5"><i class="fa-regular fa-calendar mr-1"></i>${it.dateAdded || '-'}</div>
+                                                </td>
+                                                <td class="py-3 px-4 text-center whitespace-nowrap">
+                                                    <div class="flex items-center justify-center gap-1.5">
+                                                        <button onclick="editItem('${it.id}')" title="Edit Barang" class="w-8 h-8 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 flex items-center justify-center transition">
+                                                            <i class="fa-solid fa-pen-to-square"></i>
+                                                        </button>
+                                                        <button onclick="deleteItem('${it.id}')" title="Hapus Barang" class="w-8 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 flex items-center justify-center transition">
+                                                            <i class="fa-solid fa-trash-can"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- SARPRAS REKAPITULASI VIEW ---
+        function renderSarprasView(container) {
+            const totalQty = state.items.reduce((acc, i) => acc + (parseInt(i.jumlah) || 0), 0);
+            const baikQty = state.items.filter(i => i.condition === 'Baik').reduce((acc, i) => acc + (parseInt(i.jumlah) || 0), 0);
+            const ringanQty = state.items.filter(i => i.condition === 'Rusak Ringan').reduce((acc, i) => acc + (parseInt(i.jumlah) || 0), 0);
+            const beratQty = state.items.filter(i => i.condition === 'Rusak Berat').reduce((acc, i) => acc + (parseInt(i.jumlah) || 0), 0);
+
+            const filteredItems = state.items.filter(it => {
+                if (state.filters.room !== 'ALL' && it.roomId !== state.filters.room) return false;
+                if (state.filters.condition !== 'ALL' && it.condition !== state.filters.condition) return false;
+                if (state.filters.search) {
+                    const q = state.filters.search.toLowerCase();
+                    const matchName = it.namaBarang.toLowerCase().includes(q);
+                    const matchCode = it.code.toLowerCase().includes(q);
+                    const matchJenis = (it.jenisBarang || '').toLowerCase().includes(q);
+                    const matchMerk = (it.merk || '').toLowerCase().includes(q);
+                    if (!matchName && !matchCode && !matchJenis && !matchMerk) return false;
+                }
+                return true;
+            });
+
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-bold text-slate-500 uppercase">Total Barang</p>
+                                <p class="text-2xl font-black text-slate-900 mt-1">${totalQty} <span class="text-xs font-normal text-slate-500">unit</span></p>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 font-bold">
+                                <i class="fa-solid fa-boxes-stacked"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-bold text-emerald-600 uppercase">Kondisi Baik</p>
+                                <p class="text-2xl font-black text-emerald-700 mt-1">${baikQty} <span class="text-xs font-normal text-slate-500">unit</span></p>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-bold text-amber-600 uppercase">Rusak Ringan</p>
+                                <p class="text-2xl font-black text-amber-700 mt-1">${ringanQty} <span class="text-xs font-normal text-slate-500">unit</span></p>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 font-bold">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-bold text-rose-600 uppercase">Rusak Berat</p>
+                                <p class="text-2xl font-black text-rose-700 mt-1">${beratQty} <span class="text-xs font-normal text-slate-500">unit</span></p>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-700 font-bold">
+                                <i class="fa-solid fa-circle-xmark"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                        <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-700">
+                            <i class="fa-solid fa-building-circle-check text-emerald-600 mr-1.5"></i> Status Pelaporan Laporan 22 Ruangan
+                        </h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-11 gap-2">
+                            ${ROOM_LIST.map(r => {
+                                const st = state.roomStatuses[r.id] || { status: 'Draf', isVerified: false };
+                                const itemCount = state.items.filter(i => i.roomId === r.id).length;
+                                let bgClass = 'bg-slate-50 border-slate-200 text-slate-600';
+                                if (st.isVerified) bgClass = 'bg-emerald-50 border-emerald-300 text-emerald-900';
+                                else if (st.status === 'Terkirim') bgClass = 'bg-sky-50 border-sky-300 text-sky-900';
+
+                                return `
+                                    <div onclick="selectRoomForSarpras('${r.id}')" class="cursor-pointer p-2 rounded-xl border ${bgClass} text-center hover:shadow-md transition">
+                                        <div class="font-extrabold text-xs">${r.code}</div>
+                                        <div class="text-[10px] mt-0.5 truncate">${itemCount} item</div>
+                                        <div class="mt-1">${getStatusBadgeHtml(st.status, st.isVerified, true)}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
+                        <div class="w-full md:w-72 relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
+                            <input type="text" placeholder="Cari nama / kode / jenis..." value="${escapeHtml(state.filters.search)}" oninput="onFilterSearchChange(this.value)" class="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 font-medium">
+                        </div>
+                        <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                            <select onchange="onFilterRoomChange(this.value)" class="px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-medium">
+                                <option value="ALL">Semua Ruangan (22)</option>
+                                ${ROOM_LIST.map(r => `<option value="${r.id}" ${state.filters.room === r.id ? 'selected' : ''}>${r.name}</option>`).join('')}
+                            </select>
+                            <select onchange="onFilterConditionChange(this.value)" class="px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-medium">
+                                <option value="ALL">Semua Kondisi</option>
+                                <option value="Baik" ${state.filters.condition === 'Baik' ? 'selected' : ''}>Baik</option>
+                                <option value="Rusak Ringan" ${state.filters.condition === 'Rusak Ringan' ? 'selected' : ''}>Rusak Ringan</option>
+                                <option value="Rusak Berat" ${state.filters.condition === 'Rusak Berat' ? 'selected' : ''}>Rusak Berat</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                            <h3 class="text-xs sm:text-sm font-bold text-slate-800">
+                                Hasil Filter Data Aset Inventaris (${filteredItems.length} item)
+                            </h3>
+                        </div>
+
+                        <!-- MOBILE CARD VIEW FOR SARPRAS -->
+                        <div class="block md:hidden divide-y divide-slate-100">
+                            ${filteredItems.length === 0 ? `
+                                <div class="p-8 text-center text-slate-400">
+                                    <i class="fa-solid fa-folder-open text-3xl mb-2 text-slate-300"></i>
+                                    <p class="text-xs">Tidak ada barang inventaris sesuai filter pencarian.</p>
+                                </div>
+                            ` : filteredItems.map(it => {
+                                const rm = ROOM_LIST.find(r => r.id === it.roomId) || { name: it.roomId };
+                                const cat = ITEM_CATEGORIES[it.categoryKey] || { name: it.categoryKey };
+                                const st = state.roomStatuses[it.roomId] || { status: 'Draf', isVerified: false };
+
+                                return `
+                                    <div class="p-4 space-y-2.5 hover:bg-slate-50 transition">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="font-mono font-bold text-xs text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md">${it.code}</span>
+                                            <div class="flex items-center gap-1">
+                                                ${getStatusBadgeHtml(st.status, st.isVerified, true)}
+                                                ${getConditionBadgeHtml(it.condition)}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="text-[11px] font-bold text-emerald-700 uppercase tracking-wide"><i class="fa-solid fa-door-open mr-1"></i>${rm.name}</div>
+                                            <h4 class="font-bold text-sm text-slate-900 leading-snug">${escapeHtml(it.namaBarang)}</h4>
+                                            <div class="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-slate-500">
+                                                <span class="bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded">${cat.name}</span>
+                                                <span>•</span>
+                                                <span class="font-medium text-slate-700">${escapeHtml(it.jenisBarang || '-')}</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
+                                            <div class="text-slate-700">
+                                                <span class="text-slate-400">Jumlah:</span> <strong class="text-slate-900 text-sm font-black">${it.jumlah}</strong> ${escapeHtml(it.satuan)}
+                                            </div>
+                                            <div class="flex items-center gap-1.5">
+                                                <button onclick="toggleVerifyRoom('${it.roomId}')" title="Toggle Verifikasi" class="px-2.5 py-1 rounded-lg text-[11px] font-bold ${st.isVerified ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-800'} transition">
+                                                    ${st.isVerified ? 'Batal' : 'Setujui'}
+                                                </button>
+                                                <button onclick="editItem('${it.id}')" title="Edit" class="w-7 h-7 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 flex items-center justify-center">
+                                                    <i class="fa-solid fa-pen-to-square"></i>
+                                                </button>
+                                                <button onclick="deleteItem('${it.id}')" title="Hapus" class="w-7 h-7 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 flex items-center justify-center">
+                                                    <i class="fa-solid fa-trash-can"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+
+                        <!-- DESKTOP TABLE VIEW FOR SARPRAS -->
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 font-extrabold uppercase border-b border-slate-200 text-[11px] tracking-wider">
+                                <th class="py-3 px-4 whitespace-nowrap">Kode Barang</th>
+                                <th class="py-3 px-4 whitespace-nowrap">Ruangan</th>
+                                <th class="py-3 px-4">Nama Barang</th>
+                                <th class="py-3 px-4 whitespace-nowrap">Merk</th>
+                                <th class="py-3 px-4 whitespace-nowrap">Kategori</th>
+                                <th class="py-3 px-4 whitespace-nowrap">Jenis Barang</th>
+                                <th class="py-3 px-3 text-center whitespace-nowrap">Jumlah</th>
+                                <th class="py-3 px-3 text-center whitespace-nowrap">Satuan</th>
+                                <th class="py-3 px-3 text-center whitespace-nowrap">Kondisi</th>
+                                <th class="py-3 px-3 text-center whitespace-nowrap">Status Verifikasi</th>
+                                <th class="py-3 px-4 text-center whitespace-nowrap">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium">
+                            ${filteredItems.length === 0 ? `
+                                <tr>
+                                    <td colspan="11" class="p-12 text-center text-slate-400">
+                                        <i class="fa-solid fa-folder-open text-3xl mb-2 text-slate-300"></i>
+                                        <p>Tidak ada barang inventaris sesuai filter pencarian.</p>
+                                    </td>
+                                </tr>
+                            ` : filteredItems.map(it => {
+                                const rm = ROOM_LIST.find(r => r.id === it.roomId) || { name: it.roomId };
+                                const cat = ITEM_CATEGORIES[it.categoryKey] || { name: it.categoryKey };
+                                const st = state.roomStatuses[it.roomId] || { status: 'Draf', isVerified: false };
+
+                                return `
+                                    <tr class="hover:bg-slate-50 transition align-middle">
+                                        <td class="py-3 px-4 whitespace-nowrap">
+                                            <span class="inline-block font-mono font-bold text-xs text-slate-900 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md tracking-wider">${it.code}</span>
+                                        </td>
+                                        <td class="py-3 px-4 font-bold text-slate-900 whitespace-nowrap">${rm.name}</td>
+                                        <td class="py-3 px-4 font-bold text-slate-900">${escapeHtml(it.namaBarang)}</td>
+                                        <td class="py-3 px-4 font-bold text-emerald-900 whitespace-nowrap">${escapeHtml(it.merk || '-')}</td>
+                                        <td class="py-3 px-4 whitespace-nowrap">
+                                            <span class="inline-block px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 font-semibold border border-slate-200/60">${cat.name}</span>
+                                        </td>
+                                        <td class="py-3 px-4 whitespace-nowrap text-slate-800 font-semibold">${escapeHtml(it.jenisBarang || '-')}</td>
+                                        <td class="py-3 px-3 text-center font-black text-slate-900 whitespace-nowrap">${it.jumlah}</td>
+                                        <td class="py-3 px-3 text-center font-semibold text-slate-600 whitespace-nowrap">${escapeHtml(it.satuan)}</td>
+                                        <td class="py-3 px-3 text-center whitespace-nowrap">${getConditionBadgeHtml(it.condition)}</td>
+                                        <td class="py-3 px-3 text-center whitespace-nowrap">${getStatusBadgeHtml(st.status, st.isVerified, true)}</td>
+                                        <td class="py-3 px-4 text-center whitespace-nowrap">
+                                            <div class="flex items-center justify-center gap-1">
+                                                <button onclick="toggleVerifyRoom('${it.roomId}')" title="Toggle Verifikasi Ruangan Ini" class="px-2 py-1 rounded-lg text-[10px] font-bold ${st.isVerified ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-800 hover:bg-emerald-600 hover:text-white'} transition">
+                                                    ${st.isVerified ? 'Batal Verifikasi' : 'Setujui Ruangan'}
+                                                </button>
+                                                <button onclick="editItem('${it.id}')" title="Edit" class="w-7 h-7 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 flex items-center justify-center">
+                                                    <i class="fa-solid fa-pen-to-square"></i>
+                                                </button>
+                                                <button onclick="deleteItem('${it.id}')" title="Hapus" class="w-7 h-7 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 flex items-center justify-center">
+                                                    <i class="fa-solid fa-trash-can"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // --- ITEM MODAL HANDLERS ---
+        function openItemModal(editId = null) {
+            const modal = document.getElementById('item-modal');
+            const form = document.getElementById('item-form');
+            const modalTitle = document.getElementById('modal-title');
+
+            // Populate dropdown choices
+            populateModalRoomOptions();
+            populateCategoryOptions();
+            populatePresetDropdown();
+
+            if (editId) {
+                const item = state.items.find(i => i.id === editId);
+                if (!item) return;
+
+                modalTitle.querySelector('span').innerText = 'Edit Barang Inventaris';
+                document.getElementById('form-item-id').value = item.id;
+                document.getElementById('form-item-room').value = item.roomId;
+                document.getElementById('form-item-kategori').value = item.categoryKey;
+                document.getElementById('form-item-nama').value = item.namaBarang;
+                document.getElementById('form-item-jenis').value = item.jenisBarang || '';
+                document.getElementById('form-item-jumlah').value = item.jumlah;
+                document.getElementById('form-item-satuan').value = item.satuan || 'Buah';
+                document.getElementById('form-item-condition').value = item.condition || 'Baik';
+                document.getElementById('form-item-code').value = item.code;
+                document.getElementById('form-item-date').value = item.dateAdded || new Date().toISOString().split('T')[0];
+                document.getElementById('form-item-notes').value = item.notes || '';
+                document.getElementById('form-item-preset').value = '';
+                document.getElementById('form-custom-jenis-container').classList.add('hidden');
+
+                // Populate and set brand options
+                populateMerkOptions(item.categoryKey, item.merk || '');
+            } else {
+                modalTitle.querySelector('span').innerText = 'Tambah Barang Inventaris';
+                form.reset();
+                document.getElementById('form-item-id').value = '';
+                document.getElementById('form-item-room').value = state.selectedRoomId;
+                document.getElementById('form-item-kategori').value = 'MEBEL';
+                document.getElementById('form-item-jumlah').value = 1;
+                document.getElementById('form-item-satuan').value = 'Buah';
+                document.getElementById('form-item-condition').value = 'Baik';
+                document.getElementById('form-item-date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('form-custom-jenis-container').classList.add('hidden');
+
+                populateMerkOptions('MEBEL', '');
+                regenerateItemCode();
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function populateMerkOptions(catKey, currentMerk) {
+            const select = document.getElementById('form-item-merk-select');
+            const customInput = document.getElementById('form-item-merk-custom');
+            if (!select) return;
+
+            const options = MERK_OPTIONS_BY_CAT[catKey] || ['Tanpa Merk'];
+            let html = options.map(m => `<option value="${m}">${m}</option>`).join('');
+            html += `<option value="CUSTOM_MERK">✏️ Merk Lainnya (Isi Manual)</option>`;
+            select.innerHTML = html;
+
+            if (currentMerk && options.includes(currentMerk)) {
+                select.value = currentMerk;
+                customInput.classList.add('hidden');
+                customInput.value = '';
+            } else if (currentMerk && currentMerk !== 'Tanpa Merk') {
+                select.value = 'CUSTOM_MERK';
+                customInput.classList.remove('hidden');
+                customInput.value = currentMerk;
+            } else {
+                select.value = options[0] || 'Tanpa Merk';
+                customInput.classList.add('hidden');
+                customInput.value = '';
+            }
+        }
+
+        function onMerkSelectChange(val) {
+            const customInput = document.getElementById('form-item-merk-custom');
+            if (val === 'CUSTOM_MERK') {
+                customInput.classList.remove('hidden');
+                customInput.focus();
+            } else {
+                customInput.classList.add('hidden');
+                customInput.value = '';
+            }
+        }
+
+        function closeItemModal() {
+            document.getElementById('item-modal').classList.add('hidden');
+        }
+
+        function populateModalRoomOptions() {
+            const select = document.getElementById('form-item-room');
+            if (!select) return;
+            select.innerHTML = ROOM_LIST.map(r => `<option value="${r.id}">${r.name} (${r.code})</option>`).join('');
+        }
+
+        function populateCategoryOptions() {
+            const select = document.getElementById('form-item-kategori');
+            if (!select) return;
+            select.innerHTML = Object.keys(ITEM_CATEGORIES).map(k => `<option value="${k}">${ITEM_CATEGORIES[k].name}</option>`).join('');
+        }
+
+        function populatePresetDropdown() {
+            const select = document.getElementById('form-item-preset');
+            if (!select) return;
+            let html = `<option value="">-- Pilih Preset Jenis Barang --</option>`;
+            
+            Object.keys(ITEM_CATEGORIES).forEach(catKey => {
+                const cat = ITEM_CATEGORIES[catKey];
+                html += `<optgroup label="${cat.name}">`;
+                cat.presets.forEach(p => {
+                    html += `<option value="${catKey}:${p.jenis}">${p.jenis}</option>`;
+                });
+                html += `</optgroup>`;
+            });
+
+            if (state.customPresets && state.customPresets.length > 0) {
+                html += `<optgroup label="✨ Jenis Barang Custom (Tersimpan)">`;
+                state.customPresets.forEach(cp => {
+                    html += `<option value="CUSTOM:${cp.jenis}">${cp.jenis}</option>`;
+                });
+                html += `</optgroup>`;
+            }
+
+            html += `<option value="CUSTOM_NEW">✏️ Lainnya (Isi Manual Baru)</option>`;
+            select.innerHTML = html;
+        }
+
+        function regenerateItemCode() {
+            const roomId = document.getElementById('form-item-room')?.value || state.selectedRoomId;
+            const catKey = document.getElementById('form-item-kategori')?.value || 'MEBEL';
+            const room = ROOM_LIST.find(r => r.id === roomId) || ROOM_LIST[0];
+            const cat = ITEM_CATEGORIES[catKey] || ITEM_CATEGORIES['MEBEL'];
+
+            const roomItemsOfCat = state.items.filter(i => i.roomId === roomId && i.categoryKey === catKey);
+            const count = roomItemsOfCat.length + 1;
+            const numStr = String(count).padStart(3, '0');
+
+            const codeInput = document.getElementById('form-item-code');
+            if (codeInput) {
+                codeInput.value = `${cat.prefix}-${room.code}-${numStr}`;
+            }
+        }
+
+        function onRoomOrPresetChanged() {
+            regenerateItemCode();
+        }
+
+        function selectRoomForSarpras(roomId) {
+            state.filters.room = roomId;
+            renderApp();
+        }
+
+        function onFilterSearchChange(val) {
+            state.filters.search = val;
+            renderApp();
+        }
+
+        function onFilterRoomChange(val) {
+            state.filters.room = val;
+            renderApp();
+        }
+
+        function onFilterConditionChange(val) {
+            state.filters.condition = val;
+            renderApp();
+        }
+
+        function onPresetSelected(val) {
+            const customContainer = document.getElementById('form-custom-jenis-container');
+
+            if (val === 'CUSTOM_NEW') {
+                customContainer.classList.remove('hidden');
+                document.getElementById('form-item-jenis').value = '';
+                return;
+            } else {
+                customContainer.classList.add('hidden');
+            }
+
+            if (!val) return;
+
+            const parts = val.split(':');
+            const catKey = parts[0];
+            const jenisName = parts[1];
+
+            if (catKey === 'CUSTOM') {
+                document.getElementById('form-item-jenis').value = jenisName;
+                document.getElementById('form-item-nama').value = jenisName;
+            } else {
+                const catObj = ITEM_CATEGORIES[catKey];
+                const presetObj = catObj?.presets.find(p => p.jenis === jenisName);
+
+                if (catObj) {
+                    document.getElementById('form-item-kategori').value = catKey;
+                    populateMerkOptions(catKey, '');
+                }
+                if (jenisName) {
+                    document.getElementById('form-item-jenis').value = jenisName;
+                    document.getElementById('form-item-nama').value = jenisName;
+                }
+                if (presetObj && presetObj.defaultSatuan) {
+                    document.getElementById('form-item-satuan').value = presetObj.defaultSatuan;
+                }
+            }
+
+            regenerateItemCode();
+        }
+
+        function onCategoryManualChange(catVal) {
+            populateMerkOptions(catVal, '');
+            regenerateItemCode();
+        }
+
+        function handleItemFormSubmit(e) {
+            e.preventDefault();
+
+            const editId = document.getElementById('form-item-id').value;
+            const roomId = document.getElementById('form-item-room').value;
+            const presetVal = document.getElementById('form-item-preset').value;
+            const catKey = document.getElementById('form-item-kategori').value;
+
+            let jenisBarang = document.getElementById('form-item-jenis').value.trim();
+
+            if (presetVal === 'CUSTOM_NEW') {
+                const customInput = document.getElementById('form-custom-jenis').value.trim();
+                if (customInput) {
+                    jenisBarang = customInput;
+                    if (!state.customPresets.some(cp => cp.jenis.toLowerCase() === customInput.toLowerCase())) {
+                        state.customPresets.push({ jenis: customInput, catKey: catKey });
+                        saveCustomPresetsToStorage();
+                    }
+                }
+            }
+
+            // GET MERK VALUE
+            const merkSelect = document.getElementById('form-item-merk-select').value;
+            let merkVal = merkSelect;
+            if (merkSelect === 'CUSTOM_MERK') {
+                merkVal = document.getElementById('form-item-merk-custom').value.trim() || 'Tanpa Merk';
+            }
+
+            const itemData = {
+                id: editId || 'item_' + Date.now(),
+                roomId: roomId,
+                categoryKey: catKey,
+                namaBarang: document.getElementById('form-item-nama').value.trim(),
+                merk: merkVal,
+                jenisBarang: jenisBarang,
+                jumlah: parseInt(document.getElementById('form-item-jumlah').value) || 1,
+                satuan: document.getElementById('form-item-satuan').value,
+                condition: document.getElementById('form-item-condition').value,
+                code: document.getElementById('form-item-code').value.trim(),
+                dateAdded: document.getElementById('form-item-date').value,
+                notes: document.getElementById('form-item-notes').value.trim()
+            };
+
+            if (editId) {
+                const idx = state.items.findIndex(i => i.id === editId);
+                if (idx !== -1) state.items[idx] = itemData;
+            } else {
+                state.items.push(itemData);
+            }
+
+            saveItemsToStorage();
+            closeItemModal();
+            renderApp();
+            showToast(editId ? 'Barang inventaris diperbarui' : 'Barang inventaris baru berhasil ditambahkan', 'success');
+        }
+
+        function editItem(id) {
+            openItemModal(id);
+        }
+
+        function deleteItem(id) {
+            const item = state.items.find(i => i.id === id);
+            if (!item) return;
+
+            showConfirmDialog(
+                'Hapus Barang Inventaris',
+                `Apakah Anda yakin ingin menghapus "${item.namaBarang}" (${item.code}) dari inventaris?`,
+                () => {
+                    state.items = state.items.filter(i => i.id !== id);
+                    saveItemsToStorage();
+                    renderApp();
+                    showToast('Barang inventaris berhasil dihapus', 'warning');
+                }
+            );
+        }
+
+        // --- SUBMIT & VERIFY REPORT WORKFLOW ---
+        function submitRoomReport(roomId) {
+            const room = ROOM_LIST.find(r => r.id === roomId) || { name: roomId };
+            state.roomStatuses[roomId] = {
+                status: 'Terkirim',
+                isVerified: false,
+                timestamp: new Date().toISOString()
+            };
+            saveStatusToStorage();
+            renderApp();
+            showToast(`Laporan inventaris ${room.name} berhasil dikirim ke bagian Sarpras`, 'success');
+        }
+
+        function toggleVerifyRoom(roomId) {
+            const room = ROOM_LIST.find(r => r.id === roomId) || { name: roomId };
+            const current = state.roomStatuses[roomId] || { status: 'Draf', isVerified: false };
+
+            const newStatus = !current.isVerified;
+            state.roomStatuses[roomId] = {
+                status: newStatus ? 'Terkirim' : 'Draf',
+                isVerified: newStatus,
+                timestamp: new Date().toISOString()
+            };
+
+            saveStatusToStorage();
+            renderApp();
+            showToast(newStatus ? `Laporan ${room.name} berhasil disetujui & diverifikasi Sarpras` : `Verifikasi ${room.name} dibatalkan`, 'info');
+        }
+    </script>
+</body>
+</html>
